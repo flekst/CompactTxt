@@ -155,4 +155,6 @@ function main () {
 /** Возможность инклюда этого скрипта.
     Для того, что бы не выполнялась головная функция необходимо объявить переменную runCompactTXT и установить ей значение false */
 try { runCompactTXT == undefined; } catch(err) { runCompactTXT = true; }
-runCompactTXT &&  main () ;
+if (runCompactTXT) {
+	app.doScript(main, ScriptLanguage.JAVASCRIPT, [], UndoModes.FAST_ENTIRE_SCRIPT, 'compactTXT');
+}
