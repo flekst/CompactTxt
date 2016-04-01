@@ -7,9 +7,7 @@
     Рекомендую назначить на горячую клавишу ALT+C - 
     она прекрасно коррелирует с комбинацией CTRL+ALT+C
  */
-
 /**  Copyright (c) 2008-2014, Eugeny Borisov. All rights reserved. */
-
 
 const CompactTXTerrorMessages = {
     StoryOverflowControl_MinTextPoinSize:    "Ошибка. Текст получается\nменьше минимально допустимого размера.",
@@ -30,20 +28,26 @@ var c_loopsCount = 0;
 var c_currSelect = c_myDoc.selection;
 var c_selCount = c_myDoc.selection.length;
 var c_objects2Work=Array();
-
-/** Добавляю уникальные объекты в массив  */
-function AddToArrayUnique(obj,Iarray) {
- var i = Iarray.length; 
- while (i--) if (Iarray[i] == obj) return;
- Iarray.push(obj);
+/** Добавляет элемент в массив, если он уникален */
+Array.prototype.addunique = function(element) {
+    var len = this.length;
+    while (len--) { 
+            if (this[len] == element) return; 
+     }
+     this.push (element);   
+     
 }
+/** Вызывает callback-функцию для каждого элемента массива */
+Array.prototype.map = function (callback) {
+    var len = this.length;
+    while (len--) { callback (this[len]);  }
+}
+/** Добавляет объект в массив, если он уникален */
+Object.prototype.addToArrayIfUnique = function(targetArray) {  targetArray.addunique(this); }
 
 /** c_objects2Work -- массив объектов с которыми нужно работать */
 function CalcObjectForHandle(inputObject) {
 	switch (String(inputObject)) {
-			case "[object Story]" :
-					AddToArrayUnique(inputObject, c_objects2Work);
-				break;
 			case "[object TextFrame]":
 			case "[object Text]":
 			case '[object InsertionPoint]':
@@ -52,15 +56,13 @@ function CalcObjectForHandle(inputObject) {
 			case '[object Line]': 
 			case '[object Paragraph]': 
 			case '[object TextColumn]':
-					AddToArrayUnique(inputObject.parentStory,c_objects2Work);
-					break;
+                        inputObject = inputObject.parentStory;
+  		   case "[object Story]" :
+					inputObject.addToArrayIfUnique(c_objects2Work);
+				break;                  
 			case '[object Group]':
-					var i = inputObject.allPageItems.length;
-						while (i--) 	CalcObjectForHandle(inputObject.allPageItems[i]);
+                        inputObject.allPageItems.everyItem().addToArrayIfUnique(c_objects2Work);
 					break;
-			case '[object Rectangle]':
-			case '[object GraphicLine]':
-				break;
 			default: break;
 	}
 }
@@ -89,12 +91,9 @@ function StoryOverflowControl(inpStory, percent) {
 
     var newPointSize = calcNewSize(inpStory.pointSize, percent);
   
-    if ( inpStory.leading == Leading.auto ) 
-    { newLeadingSize = Leading.auto ; 
-      } else  {  
-    newLeadingSize = calcNewSize(inpStory.leading, percent);
-    }
-
+    newLeadingSize  = ( inpStory.leading == Leading.auto ) ?  
+                                newLeadingSize = Leading.auto :  calcNewSize(inpStory.leading, percent);
+  
     var oldSize = newPointSize;
    
    /** основные "качели" - цил до изменения состояния Overflow */
@@ -125,8 +124,10 @@ function StoryOverflowControl(inpStory, percent) {
     }
     return false;
 }
+
 /** обработка одного текста */
 function HandleStory (inputSory) {
+
     c_loopsCount = 0;            
     if (inputSory.leading != Leading.auto ) {  
         var newLeading = c_InitPointSize*inputSory.leading/inputSory.pointSize;
@@ -143,10 +144,9 @@ function HandleStory (inputSory) {
 /** головная функция */
 function main () {
     try {
-        while (c_selCount--) CalcObjectForHandle(c_currSelect[c_selCount]);
-        var WorkLen = c_objects2Work.length;
-        while (WorkLen--) HandleStory(c_objects2Work[WorkLen]);
-      } catch (err) {
+       c_currSelect.map(CalcObjectForHandle);
+       c_objects2Work.map(HandleStory);
+    } catch (err) {
           alert (err); 
           exit(); 
       }
@@ -155,6 +155,7 @@ function main () {
 /** Возможность инклюда этого скрипта.
     Для того, что бы не выполнялась головная функция необходимо объявить переменную runCompactTXT и установить ей значение false */
 try { runCompactTXT == undefined; } catch(err) { runCompactTXT = true; }
+
 if (runCompactTXT) {
-	app.doScript(main, ScriptLanguage.JAVASCRIPT, [], UndoModes.FAST_ENTIRE_SCRIPT, 'compactTXT');
+	 app.doScript(main, ScriptLanguage.JAVASCRIPT, [], UndoModes.FAST_ENTIRE_SCRIPT, 'compactTXT');
 }
